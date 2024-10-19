@@ -43,3 +43,26 @@
 
 ;; NFT tracking
 (define-non-fungible-token proof-of-creativity uint)
+
+;; Functions
+
+;; Submit a new creative work
+(define-public (submit-work (content-hash (buff 32)))
+    (let
+        (
+            (submission-id (var-get next-submission-id))
+        )
+        (map-set submissions submission-id
+            {
+                creator: tx-sender,
+                content-hash: content-hash,
+                submission-height: block-height,
+                positive-votes: u0,
+                negative-votes: u0,
+                verified: false
+            }
+        )
+        (var-set next-submission-id (+ submission-id u1))
+        (ok submission-id)
+    )
+)
