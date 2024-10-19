@@ -109,3 +109,57 @@
         (ok true)
     )
 )
+
+;; Finalize validation and mint NFT if criteria met
+(define-public (finalize-validation (submission-id uint))
+    (let
+        (
+            (submission (unwrap! (map-get? submissions submission-id) (err err-not-found)))
+        )
+        ;; Check if voting period has ended
+        (asserts! (>= block-height (+ (get submission-height submission) validation-period)) (err err-voting-closed))
+        ;; Check if enough total votes
+        (asserts! (>= (+ (get positive-votes submission) (get negative-votes submission)) min-votes) (err err-insufficient-votes))
+
+        ;; If more positive votes, mint NFT and mark as verified
+        (if (> (get positive-votes submission) (get negative-votes submission))
+            (let
+                (
+                    (nft-id (var-get next-nft-id))
+                )
+                ;; Mint NFT
+                (try! (nft-mint? proof-of-creativity nft-id (get creator submission)))
+                ;; Update submission as verified
+                (map-set submissions submission-id
+                    (merge submission {verified: true})
+                )
+                ;; Increment NFT counter
+                (var-set next-nft-id (+ nft-id u1))
+                (ok true)
+            )
+            (ok false)
+        )
+    )
+)
+
+;; Getter functions
+
+;; Get submission details
+(define-read-only (get-submission (submission-id uint))
+    (map-get? submissions submission-id)
+)
+
+;; Get validator score
+(define-read-only (get-validator-score (validator principal))
+    (default-to u0 (map-get? validator-scores validator))
+)
+
+;; Get total submissions
+(define-read-only (get-total-submissions)
+    (var-get next-submission-id)
+)
+
+;; Get total NFTs minted
+(define-read-only (get-total-nfts)
+    (var-get next-nft-id)
+)
