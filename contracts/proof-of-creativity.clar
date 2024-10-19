@@ -34,3 +34,12 @@
         verified: bool
     }
 )
+
+;; Track who has voted on what
+(define-map votes
+    {submission-id: uint, validator: principal}
+    bool
+)
+
+;; NFT tracking
+(define-non-fungible-token proof-of-creativity uint)
