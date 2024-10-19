@@ -66,3 +66,46 @@
         (ok submission-id)
     )
 )
+
+;; Vote on a submission
+(define-public (vote (submission-id uint) (is-positive bool))
+    (let
+        (
+            (submission (unwrap! (map-get? submissions submission-id) (err err-not-found)))
+            (vote-key {submission-id: submission-id, validator: tx-sender})
+        )
+        ;; Check if voting period is still open
+        (asserts! (< block-height (+ (get submission-height submission) validation-period)) (err err-voting-closed))
+        ;; Check if validator hasn't voted already
+        (asserts! (is-none (map-get? votes vote-key)) (err err-already-voted))
+
+        ;; Record vote
+        (map-set votes vote-key true)
+
+        ;; Update vote counts
+        (map-set submissions submission-id
+            (merge submission
+                {
+                    positive-votes: (if is-positive
+                        (+ (get positive-votes submission) u1)
+                        (get positive-votes submission)
+                    ),
+                    negative-votes: (if is-positive
+                        (get negative-votes submission)
+                        (+ (get negative-votes submission) u1)
+                    )
+                }
+            )
+        )
+
+        ;; Update validator score
+        (let
+            (
+                (current-score (default-to u0 (map-get? validator-scores tx-sender)))
+            )
+            (map-set validator-scores tx-sender (+ current-score u1))
+        )
+
+        (ok true)
+    )
+)
